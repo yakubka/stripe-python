@@ -158,21 +158,28 @@ def _api_encode(
         elif hasattr(value, "id"):
             yield (key, getattr(value, "id"))
         elif isinstance(value, list) or isinstance(value, tuple):
-            for i, sv in enumerate(value):
-                # Always use indexed format for arrays
-                encoded_key = "%s[%d]" % (key, i)
-                if isinstance(sv, dict) or hasattr(sv, "_data"):
-                    subdict = _encode_nested_dict(encoded_key, sv)
-                    for k, v in _api_encode(subdict):
-                        yield (k, v)
-                elif isinstance(sv, (list, tuple)):
-                    subdict = _encode_nested_dict(
-                        encoded_key, dict(enumerate(sv))
-                    )
-                    for k, v in _api_encode(subdict):
-                        yield (k, v)
-                else:
-                    yield (encoded_key, sv)
+            if not value:
+                # An empty list signals "clear this field" on the Stripe API.
+                # Form-encoding omits the key entirely, which the server treats
+                # as "no change". Yielding "" causes the server to clear the
+                # field, matching the documented workaround (issue #802).
+                yield (key, "")
+            else:
+                for i, sv in enumerate(value):
+                    # Always use indexed format for arrays
+                    encoded_key = "%s[%d]" % (key, i)
+                    if isinstance(sv, dict) or hasattr(sv, "_data"):
+                        subdict = _encode_nested_dict(encoded_key, sv)
+                        for k, v in _api_encode(subdict):
+                            yield (k, v)
+                    elif isinstance(sv, (list, tuple)):
+                        subdict = _encode_nested_dict(
+                            encoded_key, dict(enumerate(sv))
+                        )
+                        for k, v in _api_encode(subdict):
+                            yield (k, v)
+                    else:
+                        yield (encoded_key, sv)
         elif isinstance(value, dict) or hasattr(value, "_data"):
             subdict = _encode_nested_dict(key, value)
             for subkey, subvalue in _api_encode(subdict):

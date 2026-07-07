@@ -105,6 +105,14 @@ class TestApiEncode:
             ("items[1][1]", 4),
         ]
 
+    def test_encode_empty_list_clears_field(self):
+        result = list(_api_encode({"blocked_categories": []}))
+        assert result == [("blocked_categories", "")]
+
+    def test_encode_empty_tuple_clears_field(self):
+        result = list(_api_encode({"items": ()}))
+        assert result == [("items", "")]
+
     def test_encode_mixed_nested_list_value(self):
         """Test that lists with mixed element types (dicts and nested lists) encode correctly."""
         result = list(
